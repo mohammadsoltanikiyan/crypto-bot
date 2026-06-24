@@ -15,7 +15,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 # CONFIG
 # =========================
 
-TOKEN = "8403952516:AAFJTe8WDl-y6_uaJ6P8yfeN_kwn-kMG8d0"
+TOKEN = "8403952516:AAEOLnuS7NL7dIyuFjFJYwe-4-C0EU4RBpM"
 DATA_FILE = "users_data.json"
 
 scheduler = AsyncIOScheduler()
