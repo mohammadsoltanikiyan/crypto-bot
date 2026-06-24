@@ -116,7 +116,9 @@ async def get_ticker(symbol):
     url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
     try:
         async with session.get(url, timeout=10) as resp:
+            print(f"Binance status for {symbol}: {resp.status}")
             if resp.status != 200:
+                print(f"Error response: {await resp.text()}")
                 return None
             d = await resp.json()
             return {
@@ -126,7 +128,8 @@ async def get_ticker(symbol):
                 "low":    float(d["lowPrice"]),
                 "volume": float(d["volume"]),
             }
-    except:
+    except Exception as e:
+        print(f"Ticker error for {symbol}: {e}")
         return None
 
 async def validate_symbol(symbol):
