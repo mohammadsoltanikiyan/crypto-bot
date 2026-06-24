@@ -96,44 +96,101 @@ def init_user(chat_id):
 # =========================
 
 async def get_klines(symbol, interval="1h", limit=100):
-    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}"
+    """دریافت کندل از CoinGecko"""
+    # تبدیل symbol به فرمت CoinGecko
+    coin_map = {
+        "BTCUSDT": "bitcoin", "ETHUSDT": "ethereum", "BNBUSDT": "binancecoin",
+        "SOLUSDT": "solana", "XRPUSDT": "ripple", "DOGEUSDT": "dogecoin",
+        "ADAUSDT": "cardano", "TRXUSDT": "tron", "AVAXUSDT": "avalanche-2",
+        "TONUSDT": "the-open-network", "DOTUSDT": "polkadot", "NEARUSDT": "near",
+        "ATOMUSDT": "cosmos", "LINKUSDT": "chainlink", "UNIUSDT": "uniswap",
+        "LTCUSDT": "litecoin", "XLMUSDT": "stellar", "AAVEUSDT": "aave",
+        "SANDUSDT": "the-sandbox", "MANAUSDT": "decentraland",
+        "AXSUSDT": "axie-infinity", "FILUSDT": "filecoin",
+        "ALGOUSDT": "algorand", "FTMUSDT": "fantom", "INJUSDT": "injective-protocol",
+        "SUIUSDT": "sui", "APTUSDT": "aptos", "LDOUSDT": "lido-dao",
+        "RENDERUSDT": "render-token", "WLDUSDT": "worldcoin-wld",
+        "FETUSDT": "fetch-ai", "AGIXUSDT": "singularitynet",
+        "NOTUSDT": "notcoin", "PEPEUSDT": "pepe", "SHIBUSDT": "shiba-inu",
+        "FLOKIUSDT": "floki", "MKRUSDT": "maker", "CRVUSDT": "curve-dao-token",
+        "IMXUSDT": "immutable-x", "OKBUSDT": "okb", "ARUSDT": "arweave",
+    }
+
+    days_map = {"5m": 1, "15m": 1, "1h": 2, "4h": 14, "1d": 90}
+    days = days_map.get(interval, 2)
+
+    coin_id = coin_map.get(symbol)
+    if not coin_id:
+        return None
+
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/ohlc?vs_currency=usd&days={days}"
     try:
         async with session.get(url, timeout=15) as resp:
             if resp.status != 200:
+                print(f"CoinGecko klines error {symbol}: {resp.status}")
                 return None
             data = await resp.json()
-            return {
-                "closes":  np.array([float(c[4]) for c in data]),
-                "highs":   np.array([float(c[2]) for c in data]),
-                "lows":    np.array([float(c[3]) for c in data]),
-                "opens":   np.array([float(c[1]) for c in data]),
-                "volumes": np.array([float(c[5]) for c in data]),
-            }
-    except:
+            if not data or len(data) < 10:
+                return None
+            opens   = np.array([float(c[1]) for c in data])
+            highs   = np.array([float(c[2]) for c in data])
+            lows    = np.array([float(c[3]) for c in data])
+            closes  = np.array([float(c[4]) for c in data])
+            volumes = np.ones(len(closes))  # CoinGecko OHLC حجم نداره
+            return {"closes": closes, "highs": highs, "lows": lows,
+                    "opens": opens, "volumes": volumes}
+    except Exception as e:
+        print(f"CoinGecko klines exception {symbol}: {e}")
         return None
+
 
 async def get_ticker(symbol):
-    url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
-    try:
-        async with session.get(url, timeout=10) as resp:
-            print(f"Binance status for {symbol}: {resp.status}")
-            if resp.status != 200:
-                print(f"Error response: {await resp.text()}")
-                return None
-            d = await resp.json()
-            return {
-                "price":  float(d["lastPrice"]),
-                "change": float(d["priceChangePercent"]),
-                "high":   float(d["highPrice"]),
-                "low":    float(d["lowPrice"]),
-                "volume": float(d["volume"]),
-            }
-    except Exception as e:
-        print(f"Ticker error for {symbol}: {e}")
+    """دریافت قیمت لحظه‌ای از CoinGecko"""
+    coin_map = {
+        "BTCUSDT": "bitcoin", "ETHUSDT": "ethereum", "BNBUSDT": "binancecoin",
+        "SOLUSDT": "solana", "XRPUSDT": "ripple", "DOGEUSDT": "dogecoin",
+        "ADAUSDT": "cardano", "TRXUSDT": "tron", "AVAXUSDT": "avalanche-2",
+        "TONUSDT": "the-open-network", "DOTUSDT": "polkadot", "NEARUSDT": "near",
+        "ATOMUSDT": "cosmos", "LINKUSDT": "chainlink", "UNIUSDT": "uniswap",
+        "LTCUSDT": "litecoin", "XLMUSDT": "stellar", "AAVEUSDT": "aave",
+        "SANDUSDT": "the-sandbox", "MANAUSDT": "decentraland",
+        "AXSUSDT": "axie-infinity", "FILUSDT": "filecoin",
+        "ALGOUSDT": "algorand", "FTMUSDT": "fantom", "INJUSDT": "injective-protocol",
+        "SUIUSDT": "sui", "APTUSDT": "aptos", "LDOUSDT": "lido-dao",
+        "RENDERUSDT": "render-token", "WLDUSDT": "worldcoin-wld",
+        "FETUSDT": "fetch-ai", "AGIXUSDT": "singularitynet",
+        "NOTUSDT": "notcoin", "PEPEUSDT": "pepe", "SHIBUSDT": "shiba-inu",
+        "FLOKIUSDT": "floki", "MKRUSDT": "maker", "CRVUSDT": "curve-dao-token",
+        "IMXUSDT": "immutable-x", "OKBUSDT": "okb", "ARUSDT": "arweave",
+    }
+
+    coin_id = coin_map.get(symbol)
+    if not coin_id:
         return None
 
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_high_low_24h=true"
+    try:
+        async with session.get(url, timeout=10) as resp:
+            print(f"CoinGecko status for {symbol}: {resp.status}")
+            if resp.status != 200:
+                return None
+            d = await resp.json()
+            info = d.get(coin_id, {})
+            if not info:
+                return None
+            return {
+                "price":  float(info.get("usd", 0)),
+                "change": float(info.get("usd_24h_change", 0)),
+                "high":   float(info.get("usd_24h_high", 0)),
+                "low":    float(info.get("usd_24h_low", 0)),
+                "volume": float(info.get("usd_24h_vol", 0)),
+            }
+    except Exception as e:
+        print(f"CoinGecko ticker exception {symbol}: {e}")
+        return None
+
+
 async def validate_symbol(symbol):
-    """چک می‌کنه آیا این ارز در بایننس وجود داره"""
     symbol = symbol.upper()
     if not symbol.endswith("USDT"):
         symbol += "USDT"
